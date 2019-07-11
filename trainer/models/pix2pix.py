@@ -29,7 +29,7 @@ class Pix2Pix:
         img_B = tf.keras.layers.Input(shape=self.shape)
         
         fake_B = self.g(img_A)                            # Translate images to the other domain
-        valid = self.d([fake_B, img_B])
+        valid = self.d([img_A, fake_B])
         
         self.combined = tf.keras.Model(inputs=[img_A, img_B], outputs=[valid, fake_B])
         
