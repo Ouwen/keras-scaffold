@@ -28,10 +28,10 @@ class Pix2Pix:
         img_A = tf.keras.layers.Input(shape=self.shape)   # Input images from both domains
         img_B = tf.keras.layers.Input(shape=self.shape)
         
-        fake_A = self.g(img_B)                            # Translate images to the other domain
-        valid = self.d([fake_A, img_B])
+        fake_B = self.g(img_A)                            # Translate images to the other domain
+        valid = self.d([fake_B, img_B])
         
-        self.combined = tf.keras.Model(inputs=[img_A, img_B], outputs=[valid, fake_A])
+        self.combined = tf.keras.Model(inputs=[img_A, img_B], outputs=[valid, fake_B])
         
         # Combined model trains generators to fool discriminators
         self.combined.compile(loss=g_loss,
@@ -110,14 +110,14 @@ class Pix2Pix:
                                        imgs_A.shape[3])
 
                 # Translate images to opposite domain
-                fake_A = self.g.predict(imgs_B)
+                fake_B = self.g.predict(imgs_A)
 
                 # Train the discriminators (original images = real / translated = Fake)
                 d_loss_real = self.d.train_on_batch([imgs_A, imgs_B], np.ones(self.patch_gan_size))
-                d_loss_fake = self.d.train_on_batch([fake_A, imgs_B], np.zeros(self.patch_gan_size))
+                d_loss_fake = self.d.train_on_batch([imgs_A, fake_B], np.zeros(self.patch_gan_size))
                 d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-                g_loss = self.combined.train_on_batch([imgs_A, imgs_B], [np.ones(self.patch_gan_size), imgs_A])
+                g_loss = self.combined.train_on_batch([imgs_A, imgs_B], [np.ones(self.patch_gan_size), imgs_B])
                 
                 self.log['d_loss'] = d_loss[0]
                 self.log['d_acc'] = 100*d_loss[1]
