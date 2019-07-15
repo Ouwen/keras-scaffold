@@ -1,8 +1,22 @@
+# Original work Copyright (c) 2017 Erik Linder-Norén
+# Modified work Copyright 2019 Ouwen Huang
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+
 import tensorflow as tf
 import numpy as np
 
 class Pix2Pix:   
-    def __init__(self, g=None, d=None, patch_gan_hw=2**5, shape = (None, None, 1), verbose=0):
+    def __init__(self, g=None, d=None, shape = (None, None, 1), verbose=0):
         self.verbose = verbose
         self.shape = shape
 
@@ -104,10 +118,7 @@ class Pix2Pix:
                 
                 imgs_A, imgs_B = self.sess.run(self.dataset_next)
                 
-                self.patch_gan_size = (imgs_A.shape[0],
-                                       imgs_A.shape[1]//self.patch_gan_hw, 
-                                       imgs_A.shape[2]//self.patch_gan_hw, 
-                                       imgs_A.shape[3])
+                self.patch_gan_size = np.concatenate([[imgs_A.shape[0]], self.d.output_shape[1:]])
 
                 # Translate images to opposite domain
                 fake_B = self.g.predict(imgs_A)

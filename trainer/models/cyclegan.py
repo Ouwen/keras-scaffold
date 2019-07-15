@@ -1,8 +1,21 @@
+# Original work Copyright (c) 2017 Erik Linder-Norén
+# Modified work Copyright 2019 Ouwen Huang
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
 import tensorflow as tf
 import numpy as np
 
 class CycleGAN:   
-    def __init__(self, g_AB=None, g_BA=None, d_B=None, d_A=None, patch_gan_hw=2**5, shape = (None, None, 1), verbose=0):
+    def __init__(self, g_AB=None, g_BA=None, d_B=None, d_A=None, shape = (None, None, 1), verbose=0):
         self.verbose = verbose
         self.shape = shape
 
@@ -126,29 +139,25 @@ class CycleGAN:
                 
                 a_batch = self.sess.run(self.dataset_a_next)
                 b_batch = self.sess.run(self.dataset_b_next)
-                
-                self.patch_gan_size = (a_batch.shape[0],
-                                       a_batch.shape[1]//self.patch_gan_hw, 
-                                       a_batch.shape[2]//self.patch_gan_hw, 
-                                       a_batch.shape[3])
-                self.valid = np.ones(self.patch_gan_size)
-                self.fake = np.zeros(self.patch_gan_size)
-                
+
                 # Translate images to opposite domain
                 fake_B = self.g_AB.predict(a_batch)
                 fake_A = self.g_BA.predict(b_batch)
 
-                # Train the discriminators (original images = real / translated = Fake)
-                dA_loss_real = self.d_A.train_on_batch(a_batch, self.valid)
-                dA_loss_fake = self.d_A.train_on_batch(fake_A, self.fake)
+                # Train the discriminators
+                dA_loss_real = self.d_A.train_on_batch(a_batch, np.ones(np.concatenate([[a_batch.shape[0]], self.d_A.output_shape[1:]])))
+                dA_loss_fake = self.d_A.train_on_batch(fake_A, np.zeros(np.concatenate([[a_batch.shape[0]], self.d_A.output_shape[1:]])))
                 dA_loss = 0.5 * np.add(dA_loss_real, dA_loss_fake)
-                dB_loss_real = self.d_B.train_on_batch(b_batch, self.valid)
-                dB_loss_fake = self.d_B.train_on_batch(fake_B, self.fake)
+                dB_loss_real = self.d_B.train_on_batch(b_batch, np.ones(np.concatenate([[b_batch.shape[0]], self.d_B.output_shape[1:]])))
+                dB_loss_fake = self.d_B.train_on_batch(fake_B, np.zeros(np.concatenate([[b_batch.shape[0]], self.d_B.output_shape[1:]])))
                 dB_loss = 0.5 * np.add(dB_loss_real, dB_loss_fake)
                 d_loss = 0.5 * np.add(dA_loss, dB_loss)
-
+                
+                # Train generator on identity loss, cycle consistency, and discriminator loss in both directions (6 outputs)
                 g_loss = self.combined.train_on_batch([a_batch, b_batch],
-                                                      [self.valid, self.valid, a_batch, b_batch, a_batch, b_batch])
+                                                      [np.ones(np.concatenate([[a_batch.shape[0]], self.d_A.output_shape[1:]])), 
+                                                       np.ones(np.concatenate([[b_batch.shape[0]], self.d_B.output_shape[1:]])),
+                                                       a_batch, b_batch, a_batch, b_batch])
                 
                 self.log['d_loss'] = d_loss[0]
                 self.log['d_acc'] = 100*d_loss[1]

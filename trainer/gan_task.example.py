@@ -36,8 +36,7 @@ def main(args):
     model = models.Pix2Pix(verbose = 1,
                            shape = (None, None, 1),
                            g=generator_model,
-                           d=discriminator_model,
-                           patch_gan_hw=2**len(filters))
+                           d=discriminator_model)
 
     model.compile(optimizer=tf.keras.optimizers.Adam(args.lr, 0.5),
                   d_loss=utils.mse,
